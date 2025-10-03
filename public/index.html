@@ -2,56 +2,79 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <title>Demonstração leitorBI</title>
+  <title>Demonstração do Funcionamento da Biblioteca "leitorBI" que Automatiza a leitura do Bilhete de Identidade de Angola via QR Code</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="estilo.css">
 </head>
 <body>
+
 <main>
-  <h1>Demonstração do Funcionamento da Biblioteca "leitorBI"</h1>
-  <p>Aponte a câmera para o QR Code no verso do Bilhete de Identidade e clique em <strong>“Iniciar Leitura do QR Code”</strong>.</p>
-
-  <button type="button" id="botaoIniciarLeitura">Iniciar Leitura do QR Code</button>
+  <h1>Demonstração do Funcionamento da Biblioteca "leitorBI" que Automatiza a leitura do Bilhete de Identidade de Angola via QR Code</h1>
+  <p>
+    Aponte a câmera do dispositivo para o <strong>QR Code</strong> localizado no verso do Bilhete de Identidade e clique no botão <strong>“Iniciar Leitura do QR Code”</strong>. O sistema irá preencher automaticamente os campos abaixo.
+  </p>  
+  
+  <!-- Botão que inicia a leitura do QR Code -->
+  <button type="button" id="botaoIniciarLeitura" aria-label="Iniciar Leitura do QR Code">Iniciar Leitura do QR Code</button>
   <button type="button" id="botaoPararLeitura" style="display:none;">Parar Leitura</button>
-
-  <div id="status" style="margin-top:10px;font-weight:bold;"></div>
+  <input type="text" id="inputLeitorExterno" style="opacity:0; position:absolute; left:-9999px;" autocomplete="off" />
+  
+  <!-- Área de vídeo onde será exibida a imagem da câmera
+       A linha abaixo exibe status da leitura, pode ser descomentada se desejado 
+       Aqui mostra o status da leitura -->
+  <div id="status" style="margin-top: 10px; font-weight: bold;"></div>
   <video id="video" width="300" height="200" autoplay muted playsinline></video>
 
+  <!-- Formulário com os campos que serão preenchidos automaticamente com os dados do QR Code -->
   <form id="formulario" autocomplete="off">
-    <div><label>Nome Completo <input type="text" data-json="nomeCompleto"></label></div>
-    <div><label>Nº do BI <input type="text" data-json="numeroDocumento"></label></div>
-    <div><label>Província <input type="text" data-json="provinciaNascimento"></label></div>
-    <div><label>Data de Nascimento <input type="text" data-json="dataNascimento"></label></div>
-    <div><label>Sexo <input type="text" data-json="sexo"></label></div>
-    <!-- ... demais campos ... -->
+     <!-- Cada campo usa o atributo data-json para mapear a chave do JSON ao campo correspondente -->
+    <div class="form-group"><label for="nomeCompleto">Nome Completo</label><input type="text" id="nomeCompleto" name="nomeCompleto" data-json="nomeCompleto" placeholder="Nome Completo"></div>
+    <div class="form-group"><label for="numeroDoBI">Nº do BI</label><input type="text" id="numeroDoBI" name="numeroBI" data-json="numeroDocumento" placeholder="Nº do BI"></div>
+    <div class="form-group"><label for="provinciaNascimento">Província</label><input type="text" id="provinciaNascimento" name="provinciaNascimento" data-json="provinciaNascimento" placeholder="Província"></div>
+    <div class="form-group"><label for="dataNascimento">Data de Nascimento</label><input type="text" id="dataNascimento" name="dataNascimento" data-json="dataNascimento" placeholder="Data de Nascimento"></div>
+    <div class="form-group"><label for="sexo">Sexo</label><input type="text" id="sexo" name="sexo" data-json="sexo" placeholder="Sexo"></div>
+    <div class="form-group"><label for="estadoCivil">Estado Civil</label><input type="text" id="estadoCivil" name="estadoCivil" data-json="estadoCivil" placeholder="Estado Civil"></div>
+    <div class="form-group"><label for="dataEmissao">Data de Emissão</label><input type="text" id="dataEmissao" name="dataEmissao" data-json="dataEmissao" placeholder="Data de Emissão"></div>
+    <div class="form-group"><label for="dataValidade">Data de Validade</label><input type="text" id="dataValidade" name="dataValidade" data-json="dataValidade" placeholder="Data de Validade"></div>
+    <div class="form-group"><label for="provinciaEmissoraDoBi">Província Emissora do BI</label><input type="text" id="provinciaEmissoraDoBi" name="provinciaEmissora" data-json="provinciaEmissora" placeholder="Província emissora"></div>
+    <div class="form-group"><label for="idadeComBaseNoAnoDeNascimento">Idade (Ano)</label><input type="number" id="idadeComBaseNoAnoDeNascimento" name="idadeComBaseNoAnoDeNascimento" data-json="idadeComBaseNoAno" placeholder="Idade"></div>
+    <div class="form-group"><label for="idadeComBaseNoMesEAnoDeNascimento">Idade (Mês/Ano)</label><input type="number" id="idadeComBaseNoMesEAnoDeNascimento" name="idadeComBaseNoMesEAnoDeNascimento" data-json="idadeExata" placeholder="Idade"></div>
+    <div class="form-group"><label for="primeiroNome">Primeiro Nome</label><input type="text" id="primeiroNome" name="primeiroNome" data-json="primeiroNome" placeholder="Primeiro Nome"></div>
+    <div class="form-group"><label for="ultimoNome">Último Nome</label><input type="text" id="ultimoNome" name="ultimoNome" data-json="ultimoNome" placeholder="Último Nome"></div>
+    <div class="form-group"><label for="faixaEtaria">Faixa Etária</label><input type="text" id="faixaEtaria" name="faixaEtaria" data-json="faixaEtaria" placeholder="Faixa Etária"></div>
+    <div class="form-group"><label for="estadoDoBilhete">Estado Do Bilhete</label><input type="text" id="estadoDoBilhete" name="estadoDoBilhete" data-json="estadoDocumento" placeholder="Estado do Bilhete"></div>
+    <div class="form-group"><label for="tempoValidadeBilhete">Tempo de Validade do Bilhete</label><input type="text" id="tempoValidadeBilhete" name="tempoValidadeBilhete" data-json="tempoValidadeDocumento" placeholder="Tempo de Validade"></div>
   </form>
 </main>
 
 <script type="module">
-  import { LeitorQRCode } from './LeitorQRCode.js';
+    import { LeitorQRCode } from './LeitorQRCode.js';
 
-  const leitor = new LeitorQRCode({
+    const leitor = new LeitorQRCode({
     botaoIniciar: document.getElementById('botaoIniciarLeitura'),
     botaoResetar: document.getElementById('botaoPararLeitura'),
     video: document.getElementById('video'),
     status: document.getElementById('status'),
     container: document.getElementById('formulario'),
-  });
+});
 
-  leitor.on('status', msg => console.log('Status:', msg));
-  leitor.on('error', erro => console.error('Erro:', erro));
+    leitor.on('status', msg => console.log('Status:', msg));
+    leitor.on('codigoDetectado', codigo => console.log('QR Code:', codigo));
+    leitor.on('processado', dados => console.log('Dados extraídos:', dados));
+    leitor.on('error', erro => console.error('Erro:', erro));
 
-  (async () => {
+    (async () => {
     await leitor.inicializar();
   })();
-</script>
+  </script>
 
+<!-- Rodapé da página com informações de contacto -->
 <footer>
   <p>Desenvolvido por <strong>Simão Brandão</strong><br>
-    Tel: <a href="tel:+244948493828">+244 948 493 828</a> |
-    Email: <a href="mailto:sibrandao2008@gmail.com">sibrandao2008@gmail.com</a></p>
+    Telemóvel: <a href="tel:+244948493828">+244 948 493 828</a> |
+    E-mail: <a href="mailto:sibrandao2008@gmail.com">sibrandao2008@gmail.com</a></p>
 </footer>
+
 </body>
 </html>
-
 
