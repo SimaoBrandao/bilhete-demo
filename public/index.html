@@ -61,7 +61,7 @@
     leitor.on('status', msg => console.log('Status:', msg));
     leitor.on('codigoDetectado', codigo => console.log('QR Code:', codigo));
     leitor.on('processado', dados => console.log('Dados extraídos:', dados));
-    leitor.on('error', erro => console.error('Erro:', erro));
+    //leitor.on('error', erro => console.error('Erro:', erro));
 
     (async () => {
     await leitor.inicializar();
