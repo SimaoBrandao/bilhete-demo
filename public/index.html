@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <title>Demonstração leitorBI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<main>
+  <h1>Demonstração do Funcionamento da Biblioteca "leitorBI"</h1>
+  <p>Aponte a câmera para o QR Code no verso do Bilhete de Identidade e clique em <strong>“Iniciar Leitura do QR Code”</strong>.</p>
+
+  <button type="button" id="botaoIniciarLeitura">Iniciar Leitura do QR Code</button>
+  <button type="button" id="botaoPararLeitura" style="display:none;">Parar Leitura</button>
+
+  <div id="status" style="margin-top:10px;font-weight:bold;"></div>
+  <video id="video" width="300" height="200" autoplay muted playsinline></video>
+
+  <form id="formulario" autocomplete="off">
+    <div><label>Nome Completo <input type="text" data-json="nomeCompleto"></label></div>
+    <div><label>Nº do BI <input type="text" data-json="numeroDocumento"></label></div>
+    <div><label>Província <input type="text" data-json="provinciaNascimento"></label></div>
+    <div><label>Data de Nascimento <input type="text" data-json="dataNascimento"></label></div>
+    <div><label>Sexo <input type="text" data-json="sexo"></label></div>
+    <!-- ... demais campos ... -->
+  </form>
+</main>
+
+<script type="module">
+  import { LeitorQRCode } from './LeitorQRCode.js';
+
+  const leitor = new LeitorQRCode({
+    botaoIniciar: document.getElementById('botaoIniciarLeitura'),
+    botaoResetar: document.getElementById('botaoPararLeitura'),
+    video: document.getElementById('video'),
+    status: document.getElementById('status'),
+    container: document.getElementById('formulario'),
+  });
+
+  leitor.on('status', msg => console.log('Status:', msg));
+  leitor.on('error', erro => console.error('Erro:', erro));
+
+  (async () => {
+    await leitor.inicializar();
+  })();
+</script>
+
+<footer>
+  <p>Desenvolvido por <strong>Simão Brandão</strong><br>
+    Tel: <a href="tel:+244948493828">+244 948 493 828</a> |
+    Email: <a href="mailto:sibrandao2008@gmail.com">sibrandao2008@gmail.com</a></p>
+</footer>
+</body>
+</html>
+
+

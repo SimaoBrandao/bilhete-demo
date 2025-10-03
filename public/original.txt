@@ -1,0 +1,1066 @@
+// zxingScanner.js
+import './zxing.min.js'; // aqui você importa o ZXing local (UMD ou min.js que já tem no projeto)
+
+export function initZXingScanner({
+  sourceSelectId = 'sourceSelect',
+  sourceSelectPanelId = 'sourceSelectPanel',
+  startButtonId = 'startButton',
+  resetButtonId = 'resetButton',
+  videoElementId = 'video',
+  resultElementId = 'result'
+} = {}) {
+  let selectedDeviceId;
+  const codeReader = new ZXing.BrowserMultiFormatReader();
+  console.log('ZXing code reader initialized');
+
+  codeReader.listVideoInputDevices()
+    .then((videoInputDevices) => {
+      const sourceSelect = document.getElementById(sourceSelectId);
+      selectedDeviceId = videoInputDevices[0]?.deviceId;
+
+      if (videoInputDevices.length >= 1) {
+        videoInputDevices.forEach((element) => {
+          const sourceOption = document.createElement('option');
+          sourceOption.text = element.label;
+          sourceOption.value = element.deviceId;
+          sourceSelect.appendChild(sourceOption);
+        });
+
+        sourceSelect.onchange = () => {
+          selectedDeviceId = sourceSelect.value;
+        };
+
+        const sourceSelectPanel = document.getElementById(sourceSelectPanelId);
+        if (sourceSelectPanel) sourceSelectPanel.style.display = 'block';
+      }
+
+      document.getElementById(startButtonId).addEventListener('click', () => {
+        codeReader.decodeFromVideoDevice(selectedDeviceId, videoElementId, (result, err) => {
+          if (result) {
+            console.log(result);
+            document.getElementById(resultElementId).textContent = result.text;
+          }
+          if (err && !(err instanceof ZXing.NotFoundException)) {
+            console.error(err);
+            document.getElementById(resultElementId).textContent = err;
+          }
+        });
+        console.log(`Started continous decode from camera with id ${selectedDeviceId}`);
+      });
+
+      document.getElementById(resetButtonId).addEventListener('click', () => {
+        codeReader.reset();
+        document.getElementById(resultElementId).textContent = '';
+        console.log('Reset.');
+      });
+    })
+    .catch((err) => {
+      console.error(err);
+    });
+}
+
+
+
+
+
+---------------------------------
+
+
+import './zxing.min.js'; // ZXing local
+
+export class ZXingScanner {
+  constructor({
+    sourceSelectId = 'sourceSelect',
+    sourceSelectPanelId = 'sourceSelectPanel',
+    startButtonId = 'startButton',
+    resetButtonId = 'resetButton',
+    videoElementId = 'video',
+    resultElementId = 'result'
+  } = {}) {
+    this.sourceSelectId = sourceSelectId;
+    this.sourceSelectPanelId = sourceSelectPanelId;
+    this.startButtonId = startButtonId;
+    this.resetButtonId = resetButtonId;
+    this.videoElementId = videoElementId;
+    this.resultElementId = resultElementId;
+
+    this.selectedDeviceId = null;
+    this.codeReader = new ZXing.BrowserMultiFormatReader();
+  }
+
+  async init() {
+    console.log('ZXing code reader initialized');
+
+    try {
+      const videoInputDevices = await this.codeReader.listVideoInputDevices();
+      const sourceSelect = document.getElementById(this.sourceSelectId);
+      this.selectedDeviceId = videoInputDevices[0]?.deviceId;
+
+      if (videoInputDevices.length >= 1) {
+        videoInputDevices.forEach((element) => {
+          const sourceOption = document.createElement('option');
+          sourceOption.text = element.label;
+          sourceOption.value = element.deviceId;
+          sourceSelect.appendChild(sourceOption);
+        });
+
+        sourceSelect.onchange = () => {
+          this.selectedDeviceId = sourceSelect.value;
+        };
+
+        const sourceSelectPanel = document.getElementById(this.sourceSelectPanelId);
+        if (sourceSelectPanel) sourceSelectPanel.style.display = 'block';
+      }
+
+      document.getElementById(this.startButtonId).addEventListener('click', () => this.start());
+      document.getElementById(this.resetButtonId).addEventListener('click', () => this.reset());
+
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  start() {
+    this.codeReader.decodeFromVideoDevice(this.selectedDeviceId, this.videoElementId, (result, err) => {
+      if (result) {
+        console.log('Código detectado:', result.text);
+        document.getElementById(this.resultElementId).textContent = result.text;
+        this.reset(); // Desliga a câmera automaticamente após capturar
+      }
+      if (err && !(err instanceof ZXing.NotFoundException)) {
+        console.error('Erro na leitura:', err);
+        document.getElementById(this.resultElementId).textContent = err;
+        this.reset(); // Também desliga se der erro crítico
+      }
+    });
+
+    console.log(`Started single decode from camera with id ${this.selectedDeviceId}`);
+  }
+
+  reset() {
+    this.codeReader.reset();
+    const video = document.getElementById(this.videoElementId);
+    if (video && video.srcObject) {
+      video.srcObject.getTracks().forEach(track => track.stop()); // garante que a câmera é liberada
+      video.srcObject = null;
+    }
+    console.log('Câmera desligada e leitor resetado.');
+  }
+}
+
+-----------------------------------------------------------
+
+
+// ZXingScanner.js
+import './zxing.min.js'; // ZXing local
+
+export class ZXingScanner {
+  constructor({
+    sourceSelectId = 'sourceSelect',
+    sourceSelectPanelId = 'sourceSelectPanel',
+    startButtonId = 'startButton',
+    resetButtonId = 'resetButton',
+    videoElementId = 'video',
+    resultElementId = 'result'
+  } = {}) {
+    this.sourceSelectId = sourceSelectId;
+    this.sourceSelectPanelId = sourceSelectPanelId;
+    this.startButtonId = startButtonId;
+    this.resetButtonId = resetButtonId;
+    this.videoElementId = videoElementId;
+    this.resultElementId = resultElementId;
+
+    this.selectedDeviceId = null;
+    this.codeReader = new ZXing.BrowserMultiFormatReader();
+  }
+
+  async init() {
+    console.log('ZXing code reader initialized');
+
+    try {
+      const videoInputDevices = await this.codeReader.listVideoInputDevices();
+      const sourceSelect = document.getElementById(this.sourceSelectId);
+      this.selectedDeviceId = videoInputDevices[0]?.deviceId;
+
+      if (videoInputDevices.length >= 1) {
+        videoInputDevices.forEach((element) => {
+          const sourceOption = document.createElement('option');
+          sourceOption.text = element.label;
+          sourceOption.value = element.deviceId;
+          sourceSelect.appendChild(sourceOption);
+        });
+
+        sourceSelect.onchange = () => {
+          this.selectedDeviceId = sourceSelect.value;
+        };
+
+        const sourceSelectPanel = document.getElementById(this.sourceSelectPanelId);
+        if (sourceSelectPanel) sourceSelectPanel.style.display = 'block';
+      }
+
+      document.getElementById(this.startButtonId).addEventListener('click', () => this.start());
+      document.getElementById(this.resetButtonId).addEventListener('click', () => this.reset());
+
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async start() {
+    const videoElement = document.getElementById(this.videoElementId);
+
+    try {
+      // Primeiro, inicia o stream de forma manual para garantir resolução
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { deviceId: this.selectedDeviceId ? { exact: this.selectedDeviceId } : undefined }
+      });
+      videoElement.srcObject = stream;
+
+      // Aguarda até que o vídeo tenha dimensões válidas
+      await new Promise((resolve, reject) => {
+        if (videoElement.readyState >= 2 && videoElement.videoWidth > 0) {
+          resolve();
+        } else {
+          videoElement.onloadeddata = () => {
+            if (videoElement.videoWidth > 0) {
+              resolve();
+            } else {
+              reject(new Error('Câmera não retornou resolução válida.'));
+            }
+          };
+        }
+      });
+
+      // Agora que a câmera está pronta, passa o controle para o ZXing
+      this.codeReader.decodeFromVideoDevice(
+        this.selectedDeviceId,
+        this.videoElementId,
+        (result, err) => {
+          if (result) {
+            console.log('Código detectado:', result.text);
+            document.getElementById(this.resultElementId).textContent = result.text;
+            this.reset();
+          }
+          if (err && !(err instanceof ZXing.NotFoundException)) {
+            console.error('Erro na leitura:', err);
+            document.getElementById(this.resultElementId).textContent = err;
+            this.reset();
+          }
+        }
+      );
+
+      console.log(`Started decode from camera with id ${this.selectedDeviceId}`);
+
+    } catch (error) {
+      console.error('Erro ao iniciar a câmera:', error);
+      document.getElementById(this.resultElementId).textContent = error.message || error;
+    }
+  }
+
+  reset() {
+    this.codeReader.reset();
+    const video = document.getElementById(this.videoElementId);
+    if (video && video.srcObject) {
+      video.srcObject.getTracks().forEach(track => track.stop());
+      video.srcObject = null;
+    }
+    console.log('Câmera desligada e leitor resetado.');
+  }
+}
+
+----------------------------------------------------
+
+
+// ZXingScanner.js
+import './zxing.min.js'; // ZXing local
+
+export class ZXingScanner {
+  constructor({
+    sourceSelectId = 'sourceSelect',
+    sourceSelectPanelId = 'sourceSelectPanel',
+    startButtonId = 'startButton',
+    videoElementId = 'video',
+    resultElementId = 'result'
+  } = {}) {
+    this.sourceSelectId = sourceSelectId;
+    this.sourceSelectPanelId = sourceSelectPanelId;
+    this.startButtonId = startButtonId;
+    this.videoElementId = videoElementId;
+    this.resultElementId = resultElementId;
+
+    this.selectedDeviceId = null;
+    this.codeReader = new ZXing.BrowserMultiFormatReader();
+  }
+
+  async init() {
+    console.log('ZXing code reader initialized');
+
+    try {
+      const videoInputDevices = await this.codeReader.listVideoInputDevices();
+      const sourceSelect = document.getElementById(this.sourceSelectId);
+      this.selectedDeviceId = videoInputDevices[0]?.deviceId;
+
+      if (videoInputDevices.length >= 1) {
+        videoInputDevices.forEach((element) => {
+          const sourceOption = document.createElement('option');
+          sourceOption.text = element.label;
+          sourceOption.value = element.deviceId;
+          sourceSelect.appendChild(sourceOption);
+        });
+
+        sourceSelect.onchange = () => {
+          this.selectedDeviceId = sourceSelect.value;
+        };
+
+        const sourceSelectPanel = document.getElementById(this.sourceSelectPanelId);
+        if (sourceSelectPanel) sourceSelectPanel.style.display = 'block';
+      }
+
+      document.getElementById(this.startButtonId).addEventListener('click', () => this.start());
+
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async start() {
+    try {
+      console.log(`Iniciando leitura única da câmera ${this.selectedDeviceId || '[default]'}`);
+
+      const result = await this.codeReader.decodeOnceFromVideoDevice(
+        this.selectedDeviceId,
+        this.videoElementId
+      );
+
+      console.log('Código detectado:', result.text);
+      document.getElementById(this.resultElementId).textContent = result.text;
+
+      this.releaseCamera();
+
+    } catch (err) {
+      console.error('Erro na leitura:', err);
+      document.getElementById(this.resultElementId).textContent = err;
+      this.releaseCamera();
+    }
+  }
+
+  releaseCamera() {
+    const video = document.getElementById(this.videoElementId);
+    if (video && video.srcObject) {
+      video.srcObject.getTracks().forEach(track => track.stop());
+      video.srcObject = null;
+    }
+    console.log('Câmera liberada.');
+  }
+}
+
+--------------------------------------------------------------------------------------------------
+
+import './zxing.min.js'; // ZXing local
+
+export class ZXingScanner {
+  constructor({
+    sourceSelectId = 'sourceSelect',
+    sourceSelectPanelId = 'sourceSelectPanel',
+    startButtonId = 'startButton',
+    resetButtonId = 'resetButton',
+    videoElementId = 'video',
+    resultElementId = 'result'
+  } = {}) {
+    this.sourceSelectId = sourceSelectId;
+    this.sourceSelectPanelId = sourceSelectPanelId;
+    this.startButtonId = startButtonId;
+    this.resetButtonId = resetButtonId;
+    this.videoElementId = videoElementId;
+    this.resultElementId = resultElementId;
+
+    this.selectedDeviceId = null;
+    this.codeReader = new ZXing.BrowserMultiFormatReader();
+  }
+
+  async init() {
+    console.log('ZXing code reader initialized');
+
+    try {
+      const videoInputDevices = await this.codeReader.listVideoInputDevices();
+      const sourceSelect = document.getElementById(this.sourceSelectId);
+      this.selectedDeviceId = videoInputDevices[0]?.deviceId;
+
+      if (videoInputDevices.length >= 1) {
+        videoInputDevices.forEach((element) => {
+          const sourceOption = document.createElement('option');
+          sourceOption.text = element.label;
+          sourceOption.value = element.deviceId;
+          sourceSelect.appendChild(sourceOption);
+        });
+
+        sourceSelect.onchange = () => {
+          this.selectedDeviceId = sourceSelect.value;
+        };
+
+        const sourceSelectPanel = document.getElementById(this.sourceSelectPanelId);
+        if (sourceSelectPanel) sourceSelectPanel.style.display = 'block';
+      }
+
+      document.getElementById(this.startButtonId).addEventListener('click', () => this.start());
+      document.getElementById(this.resetButtonId).addEventListener('click', () => this.reset());
+
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async start() {
+    try {
+      console.log(`Iniciando leitura única da câmera ${this.selectedDeviceId || '[default]'}`);
+
+      const result = await this.codeReader.decodeOnceFromVideoDevice(
+        this.selectedDeviceId,
+        this.videoElementId
+      );
+
+      console.log('Código detectado:', result.text);
+      document.getElementById(this.resultElementId).textContent = result.text;
+
+      this.releaseCamera();
+
+    } catch (err) {
+      console.error('Erro na leitura:', err);
+      document.getElementById(this.resultElementId).textContent = err;
+      this.releaseCamera();
+    }
+  }
+
+  reset() {
+    console.log('Resetando leitura...');
+    this.codeReader.reset();
+    this.releaseCamera();
+    document.getElementById(this.resultElementId).textContent = '';
+  }
+
+  releaseCamera() {
+    const video = document.getElementById(this.videoElementId);
+    if (video && video.srcObject) {
+      video.srcObject.getTracks().forEach(track => track.stop());
+      video.srcObject = null;
+    }
+    console.log('Câmera liberada.');
+  }
+}
+
+
+-----------------------------------------------------------------
+
+// LeitorQRCode.js
+import './zxing.min.js'; // ZXing local
+
+export class LeitorQRCode {
+  constructor({
+    idBotaoIniciar = 'startButton',
+    idBotaoResetar = 'resetButton',
+    idElementoVideo = 'video',
+    idElementoResultado = 'result',
+    idDivStatus = 'status'
+  } = {}) {
+    this.idBotaoIniciar = idBotaoIniciar;
+    this.idBotaoResetar = idBotaoResetar;
+    this.idElementoVideo = idElementoVideo;
+    this.idElementoResultado = idElementoResultado;
+    this.idDivStatus = idDivStatus;
+
+    this.leitorCodigo = new ZXing.BrowserMultiFormatReader();
+  }
+
+  atualizarStatus(mensagem) {
+    const divStatus = document.getElementById(this.idDivStatus);
+    if (divStatus) divStatus.textContent = mensagem;
+  }
+
+  async inicializar() {
+    this.atualizarStatus('Leitor ZXing inicializado');
+
+    document.getElementById(this.idBotaoIniciar).addEventListener('click', () => this.iniciarLeitura());
+    document.getElementById(this.idBotaoResetar).addEventListener('click', () => this.resetarLeitura());
+  }
+
+  async tentarIniciarComModoCamera(constraints) {
+    return this.leitorCodigo.decodeFromConstraints(
+      { video: constraints },
+      this.idElementoVideo,
+      (resultado, erro) => {
+        if (resultado) {
+          this.atualizarStatus('Código detectado: ' + resultado.text);
+          document.getElementById(this.idElementoResultado).textContent = resultado.text;
+          this.liberarCamera();
+        }
+        if (erro) {
+          //Pode tratar erros de leitura aqui se desejar
+        }
+      }
+    );
+  }
+
+  async iniciarLeitura() {
+    this.atualizarStatus('Iniciando leitura da câmera traseira');
+
+    try {
+      // Tenta usar o modo de câmera exato "environment"
+      await this.tentarIniciarComModoCamera({ facingMode: { exact: 'environment' } });
+    } catch {
+      try {
+        // Tenta modo de câmera "environment" genérico
+        await this.tentarIniciarComModoCamera({ facingMode: 'environment' });
+      } catch {
+        try {
+          // Alternativa: procura câmera traseira pelo nome
+          const dispositivos = await this.leitorCodigo.listVideoInputDevices();
+          const cameraTraseira = dispositivos.find(d => /back|rear|traseira/i.test(d.label)) || dispositivos[0];
+          if (!cameraTraseira) {
+            document.getElementById(this.idElementoResultado).textContent = 'Nenhuma câmera disponível.';
+            this.liberarCamera();
+            return;
+          }
+          await this.leitorCodigo.decodeOnceFromVideoDevice(cameraTraseira.deviceId, this.idElementoVideo);
+        } catch (erro) {
+          this.atualizarStatus('Erro na leitura: ' + erro);
+          document.getElementById(this.idElementoResultado).textContent = erro;
+          this.liberarCamera();
+        }
+      }
+    }
+  }
+
+  resetarLeitura() {
+    this.atualizarStatus('Resetando leitura...');
+    this.leitorCodigo.reset();
+    this.liberarCamera();
+    document.getElementById(this.idElementoResultado).textContent = '';
+  }
+
+  liberarCamera() {
+    const video = document.getElementById(this.idElementoVideo);
+    if (video && video.srcObject) {
+      video.srcObject.getTracks().forEach(trilha => trilha.stop());
+      video.srcObject = null;
+    }
+    this.atualizarStatus('Câmera liberada.');
+  }
+}
+
+
+------------------------------------------------
+
+import iniciarWasm, * as wasm from '/leitorBI.js';
+import { LeitorQRCode } from '/LeitorQRCode.js';  // supondo caminhos
+import { PreencherFormulario } from '/PreencherFormulario.js';
+
+export class LeitorQRCodeComWasm {
+  /**
+   * @param {HTMLElement} container Elemento raiz contendo vídeo, botões e campos para preencher
+   */
+  constructor(container) {
+    this.container = container;
+    this.leitorQRCode = new LeitorQRCode();
+    this.preencherFormulario = new PreencherFormulario(container);
+    this.iniciado = false;
+  }
+
+  async iniciar() {
+    if (this.iniciado) return;
+    await iniciarWasm();
+    this.iniciado = true;
+
+    this.leitorQRCode.aoDetectarLeitura(texto => this.#processarTexto(texto));
+    // Aqui você pode conectar eventos do leitor de QR, botões etc, ou expor métodos para controle externo
+  }
+
+  async iniciarLeitura() {
+    if (!this.iniciado) await this.iniciar();
+    await this.leitorQRCode.iniciarLeitura();
+  }
+
+  pararLeitura() {
+    this.leitorQRCode.pararLeitura();
+  }
+
+  #processarTexto(texto) {
+    try {
+      const dadosExtraidos = wasm.extrair_dados_documento(texto);
+      const dados = Object.fromEntries(dadosExtraidos.entries());
+      this.preencherFormulario.preencher(dados);
+    } catch (erro) {
+      console.error('Erro ao processar dados WASM:', erro);
+    }
+  }
+}
+ ----------------------------------------------------------------------------
+ esse funciona e muito bem: 
+
+ // LeitorQRCode.js
+import initWasm, * as wasm from './xdados.js';
+import './zxing.min.js'; // ZXing local
+
+export class LeitorQRCode {
+  constructor({
+    idBotaoIniciar,
+    idBotaoResetar,
+    idElementoVideo,
+    idDivStatus,
+    idContainer = null // opcional, raiz para preencher campos
+  } = {}) {
+    this.idBotaoIniciar = idBotaoIniciar;
+    this.idBotaoResetar = idBotaoResetar;
+    this.idElementoVideo = idElementoVideo;
+    this.idDivStatus = idDivStatus;
+    this.idContainer = idContainer ? document.getElementById(idContainer) : document;
+
+    this.leitorCodigo = new ZXing.BrowserMultiFormatReader();
+  }
+
+  atualizarStatus(mensagem) {
+    const divStatus = document.getElementById(this.idDivStatus);
+    if (divStatus) divStatus.textContent = mensagem;
+  }
+
+  async inicializar() {
+    this.atualizarStatus('Inicializando WASM...');
+    try {
+      await initWasm();
+      this.atualizarStatus('Leitor ZXing + WASM inicializado');
+    } catch (erro) {
+      this.atualizarStatus('Erro ao inicializar WASM: ' + erro);
+      console.error(erro);
+      return;
+    }
+
+    document.getElementById(this.idBotaoIniciar).addEventListener('click', () => this.iniciarLeitura());
+    document.getElementById(this.idBotaoResetar).addEventListener('click', () => this.resetarLeitura());
+  }
+
+  async tentarIniciarComModoCamera(constraints) {
+    return this.leitorCodigo.decodeFromConstraints(
+      { video: constraints },
+      this.idElementoVideo,
+      (resultado, erro) => {
+        if (resultado) {
+          this.atualizarStatus('Código detectado: ' + resultado.text);
+          this.processar(resultado.text); // chama processamento WASM
+          this.liberarCamera();
+        }
+        if (erro) {
+          // tratar erros de leitura, opcional
+          // console.log('Erro leitura:', erro);
+        }
+      }
+    );
+  }
+
+  async iniciarLeitura() {
+    this.atualizarStatus('Iniciando leitura da câmera traseira');
+    document.getElementById(this.idElementoVideo).style.display = 'block';  // <-- mostrar vídeo aqui
+    document.getElementById(this.idBotaoResetar).style.display = 'inline-block';
+    document.getElementById(this.idBotaoIniciar).style.display = 'none';
+
+
+    try {
+      await this.tentarIniciarComModoCamera({ facingMode: { exact: 'environment' } });
+    } catch {
+      try {
+        await this.tentarIniciarComModoCamera({ facingMode: 'environment' });
+      } catch {
+        try {
+          const dispositivos = await this.leitorCodigo.listVideoInputDevices();
+          const cameraTraseira = dispositivos.find(d => /back|rear|traseira/i.test(d.label)) || dispositivos[0];
+          if (!cameraTraseira) {
+            this.atualizarStatus('Nenhuma câmera disponível.');
+            this.liberarCamera();
+            return;
+          }
+          await this.leitorCodigo.decodeOnceFromVideoDevice(cameraTraseira.deviceId, this.idElementoVideo)
+            .then(resultado => {
+              this.atualizarStatus('Código detectado: ' + resultado.text);
+              this.processar(resultado.text);
+              this.liberarCamera();
+            })
+            .catch(erro => {
+              this.atualizarStatus('Erro na leitura: ' + erro);
+              this.liberarCamera();
+            });
+        } catch (erro) {
+          this.atualizarStatus('Erro na leitura: ' + erro);
+          this.liberarCamera();
+        }
+      }
+    }
+  }
+
+  resetarLeitura() {
+    this.atualizarStatus('Resetando leitura...');
+    this.leitorCodigo.reset();
+    this.liberarCamera();
+    // opcional limpar campos preenchidos
+    this.preencherCampos({});
+  }
+
+  liberarCamera() {
+   const video = document.getElementById(this.idElementoVideo);
+   try {
+    this.leitorCodigo.reset();
+   } catch(e) {
+      this.atualizarStatus('Erro ao resetar leitor:', e);
+   }
+
+   if (!video.paused) video.pause();
+   if (video.srcObject) {
+     video.srcObject.getTracks().forEach(t => t.stop());
+     video.srcObject = null;
+   }
+   video.style.display = 'none';
+   document.getElementById(this.idBotaoResetar).style.display = 'none';
+   document.getElementById(this.idBotaoIniciar).style.display = 'inline-block';
+   this.atualizarStatus('Câmera liberada.');
+  }
+
+  async processar(texto) {
+    this.atualizarStatus('Processando com WebAssembly...');
+    try {
+      const dadosExtraidos = wasm.extrair_dados_documento(texto);
+      const json = Object.fromEntries(dadosExtraidos.entries());
+      this.preencherCampos(json);
+      this.atualizarStatus('Dados processados localmente.');
+    } catch (erro) {
+      this.atualizarStatus('Erro ao processar QR Code.');
+      console.error(erro);
+    }
+  }
+
+  preencherCampos(dados) {
+    if (!dados) return;
+
+    this.idContainer.querySelectorAll('input[data-json], select[data-json], textarea[data-json]').forEach(elemento => {
+      const chave = elemento.dataset.json;
+      if (chave in dados) {
+        if ('value' in elemento) {
+          elemento.value = dados[chave] != null ? dados[chave].toString().trim() : '';
+        } else {
+          elemento.textContent = dados[chave] != null ? dados[chave].toString().trim() : '';
+        }
+      } else {
+        // Limpa campo se a chave não existe
+        if ('value' in elemento) {
+          elemento.value = '';
+        } else {
+          elemento.textContent = '';
+        }
+      }
+    });
+  }
+}
+
+-----------------------------------------------------------
+good
+
+// LeitorQRCode.js
+import initWasm, * as wasm from './xdados.js';
+import './zxing.min.js'; // ZXing local
+
+/**
+ * LeitorQRCode - biblioteca reutilizável para leitura de QR Code com WASM e ZXing
+ * - Configurável via elementos DOM ou callbacks
+ * - Exposição de eventos via listeners
+ * - Separação lógica e UI
+ */
+export class LeitorQRCode {
+  
+  constructor({
+    botaoIniciar,//Elemento botão iniciar leitura
+    botaoResetar,//Elemento botão resetar leitura
+    video,//Elemento video para mostrar câmera
+    status = null,//Elemento para mostrar status
+    container = null,//Container para preencher campos via data-json
+  } = {}) {
+    if (!video) throw new Error('video é obrigatório');
+    if (!botaoIniciar) throw new Error('O botão iniciar é obrigatório');
+    if (!botaoResetar) throw new Error('O botão resetar é obrigatório');
+
+    this.botaoIniciar = botaoIniciar;
+    this.botaoResetar = botaoResetar;
+    this.video = video;
+    this.status = status;
+    this.container = container || document;
+
+    this.leitorCodigo = new ZXing.BrowserMultiFormatReader();
+
+    // Estado interno
+    this._iniciado = false;
+
+    // Eventos custom (mapa de arrays)
+    this._eventListeners = {};
+  }
+
+  // Método para adicionar eventos customizados
+  on(eventName, callback) {
+    if (!this._eventListeners[eventName]) this._eventListeners[eventName] = [];
+    this._eventListeners[eventName].push(callback);
+  }
+
+  // Emitir eventos
+  _emit(eventName, data) {
+    if (!this._eventListeners[eventName]) return;
+    for (const cb of this._eventListeners[eventName]) {
+      try {
+        cb(data);
+      } catch (e) {
+        console.error(`Erro no listener do evento ${eventName}:`, e);
+      }
+    }
+  }
+
+  // Atualiza status UI, se existir
+  atualizarStatus(mensagem) {
+    if (this.status) {
+      this.status.textContent = mensagem;
+    }
+    this._emit('status', mensagem);
+  }
+
+  // Inicializa a lib, configura WASM e eventos (botões opcionais)
+  async inicializar() {
+    this.atualizarStatus('Inicializando WASM...');
+    try {
+      await initWasm();
+      this.atualizarStatus('Leitor ZXing + WASM inicializado');
+      this._iniciado = true;
+    } catch (erro) {
+      this.atualizarStatus('Erro ao inicializar WASM: ' + erro);
+      this._emit('error', erro);
+      throw erro;
+    }
+
+    if (this.botaoIniciar) {
+      this.botaoIniciar.addEventListener('click', () => this.iniciarLeitura());
+    }
+    if (this.botaoResetar) {
+      this.botaoResetar.addEventListener('click', () => this.resetarLeitura());
+    }
+  }
+
+  // Tenta iniciar leitura com certas constraints de câmera
+  async tentarIniciarComModoCamera(constraints) {
+    return this.leitorCodigo.decodeFromConstraints(
+      { video: constraints },
+      this.video,
+      (resultado, erro) => {
+        if (resultado) {
+            this.processar(resultado.text)
+            .then(() => this.liberarCamera())
+            .catch(err => {
+              this._emit('error', err);
+              this.liberarCamera();
+            });
+        }
+        if (erro) {
+          this._emit('errorLeitura', erro);
+          // pode ignorar erros de decodificação menores
+        }
+      }
+    );
+  }
+
+  // Método principal para iniciar leitura
+  async iniciarLeitura() {
+    if (!this._iniciado) {
+      throw new Error('Lib não inicializada. Chame inicializar() primeiro.');
+    }
+
+    this.atualizarStatus('Iniciando leitura da câmera traseira');
+    this._showVideo(true);
+    this._toggleBotoes({ iniciar: false, resetar: true });
+
+    try {
+      await this.tentarIniciarComModoCamera({ facingMode: { exact: 'environment' } });
+    } catch {
+      try {
+        await this.tentarIniciarComModoCamera({ facingMode: 'environment' });
+      } catch {
+        try {
+          const dispositivos = await this.leitorCodigo.listVideoInputDevices();
+          const cameraTraseira = dispositivos.find(d => /back|rear|traseira/i.test(d.label)) || dispositivos[0];
+          if (!cameraTraseira) {
+            this.atualizarStatus('Nenhuma câmera disponível.');
+            this.liberarCamera();
+            return;
+          }
+          const resultado = await this.leitorCodigo.decodeOnceFromVideoDevice(cameraTraseira.deviceId, this.video);
+          this.atualizarStatus('Código detectado: ' + resultado.text);
+          await this.processar(resultado.text);
+          this.liberarCamera();
+        } catch (erro) {
+          this.atualizarStatus('Erro na leitura: ' + erro);
+          this.liberarCamera();
+        }
+      }
+    }
+  }
+
+  // Reseta leitura - não limpa campos automaticamente, para evitar efeitos colaterais
+  resetarLeitura() {
+    this.atualizarStatus('Resetando leitura...');
+    try {
+      this.leitorCodigo.reset();
+    } catch {}
+    this.liberarCamera();
+    this._emit('reset');
+  }
+
+  // Libera a câmera e esconde vídeo
+  liberarCamera() {
+    try {
+      this.leitorCodigo.reset();
+    } catch (e) {
+      this.atualizarStatus('Erro ao resetar leitor: ' + e);
+    }
+
+    if (!this.video.paused) this.video.pause();
+    if (this.video.srcObject) {
+      this.video.srcObject.getTracks().forEach(t => t.stop());
+      this.video.srcObject = null;
+    }
+    this._showVideo(false);
+    this._toggleBotoes({ iniciar: true, resetar: false });
+    this.atualizarStatus('Câmera liberada.');
+  }
+
+
+  //Decodifica QR Code a partir de uma imagem (File ou HTMLImageElement)
+  async decodificarImagem(imagem) {
+    this.atualizarStatus('Decodificando QR Code da imagem...');
+
+    try {
+      let imagemElement;
+
+      if (imagem instanceof File) {
+        // Cria um HTMLImageElement a partir do File
+        const url = URL.createObjectURL(imagem);
+        imagemElement = new Image();
+        await new Promise((resolve, reject) => {
+          imagemElement.onload = () => {
+            URL.revokeObjectURL(url);
+            resolve();
+          };
+          imagemElement.onerror = reject;
+          imagemElement.src = url;
+        });
+      } else if (imagem instanceof HTMLImageElement) {
+          imagemElement = imagem;
+      } else {
+          throw new Error('Parâmetro deve ser File ou HTMLImageElement');
+      }
+
+      // Decodifica usando ZXing a partir da imagem
+      const resultado = await this.leitorCodigo.decodeFromImage(imagemElement);
+      this.atualizarStatus('Código detectado');
+      await this.processar(resultado.text);
+    } catch (erro) {
+        this.atualizarStatus('Erro ao decodificar imagem: ' + erro.message);
+        throw erro;
+      }
+  }
+
+  // Função auxiliar para validar entrada texto simples
+  validarEntrada(texto, maxLength = 2048) {
+    if (typeof texto !== 'string') {
+      throw new Error('Entrada não é uma string.');
+    }
+    if (texto.length > maxLength) {
+      throw new Error(`Entrada muito longa. Máximo permitido: ${maxLength} caracteres.`);
+    }
+    // Verifica se é UTF-8 válido — TextDecoder lança erro se inválido
+    try {
+      const encoder = new TextEncoder();
+      const decoder = new TextDecoder('utf-8', { fatal: true });
+      const encoded = encoder.encode(texto);
+      decoder.decode(encoded);
+    } catch {
+      throw new Error('Texto contém bytes inválidos UTF-8.');
+    }
+    // Verifica se contém caracteres de controle (exceto \n, \r, \t)
+    if (/[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(texto)) {
+      throw new Error('Entrada contém caracteres de controle inválidos.');
+    }
+    // Define whitelist de caracteres permitidos:
+    // Letras (maiúsculas e minúsculas), números, espaços, pontuação comum, acentos e caracteres latinos básicos.
+    // Ajuste conforme seu domínio específico (ex: adicionar símbolos especiais se necessário).
+    const whitelistRegex = /^[\w\sÀ-ÖØ-öø-ÿ.,;:?!@#%&*()\-_=+\[\]{}|\\/<> "'´`^~ªº§¼½¾€$£¥₹€¢µ¿¡§]+$/u;
+    if (!whitelistRegex.test(texto)) {
+      throw new Error('Entrada contém caracteres inválidos.');
+    }
+
+    // Sanitiza texto: escapa caracteres especiais para evitar XSS
+    const textoSanitizado = this.sanitizeTexto(texto);
+
+    return textoSanitizado;
+  }
+
+  sanitizeTexto(t) {
+    return t
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+      .replace(/\//g, '&#x2F;');
+  }
+
+  // Processa texto do QR com WASM async
+  async processar(texto) {
+    try {
+      this.validarEntrada(texto);
+    } catch (erroValidacao) {
+      this.atualizarStatus('Entrada inválida: ' + erroValidacao.message);
+      throw erroValidacao;
+    }
+
+    this.atualizarStatus('Processando com WebAssembly...');
+
+    try {
+     // Passa texto direto para WASM
+     const dadosExtraidos = wasm.extrair_dados_documento(texto);
+     const json = Object.fromEntries(dadosExtraidos.entries());
+     this.preencherCampos(json);
+     this.atualizarStatus('Dados processados localmente.');
+    } catch (erro) {
+       this.atualizarStatus('Erro ao processar QR Code. ', erro);
+       throw erro;
+    }
+  }  
+
+  // Preenche campos dentro do container por data-json
+  preencherCampos(dados) {
+    if (!dados) return;
+
+    this.container.querySelectorAll('input[data-json], select[data-json], textarea[data-json]').forEach(elemento => {
+      const chave = elemento.dataset.json;
+      if (chave in dados) {
+        if ('value' in elemento) {
+          elemento.value = dados[chave] != null ? dados[chave].toString().trim() : '';
+        } else {
+          elemento.textContent = dados[chave] != null ? dados[chave].toString().trim() : '';
+        }
+      }
+    });
+  }
+
+  // Mostrar ou esconder vídeo
+  _showVideo(mostrar) {
+    this.video.style.display = mostrar ? 'block' : 'none';
+  }
+
+  // Controlar visibilidade dos botões (se foram passados)
+  _toggleBotoes({ iniciar, resetar }) {
+    if (this.botaoIniciar) this.botaoIniciar.style.display = iniciar ? 'inline-block' : 'none';
+    if (this.botaoResetar) this.botaoResetar.style.display = resetar ? 'inline-block' : 'none';
+  }
+}
+
+
