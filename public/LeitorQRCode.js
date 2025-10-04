@@ -1,8 +1,16 @@
-// Importa o inicializador do WebAssembly (gera xdados.wasm -> xdados.js wrapper)
+// Importa o inicializador do WebAssembly e as funções expostas
 import initWasm, * as wasm from './xdados.js';
-// Importa a lib ZXing compilada para JS (leitura de QRCode por câmera)
+// Importa a lib ZXing compilada para JS
 import './zxing.min.js';
 
+/**
+ * LeitorQRCode - biblioteca reutilizável para leitura de QR Code com WASM e ZXing
+ * Faz:
+ *  - Abertura de câmera (com fallback de modos e dispositivos)
+ *  - Decodificação de QRCode em tempo real ou por imagem
+ *  - Processamento local via WebAssembly (xdados.js)
+ *  - Preenchimento automático de formulários via atributos data-json
+ */
 export class LeitorQRCode {
   constructor({
     botaoIniciar,
@@ -10,22 +18,24 @@ export class LeitorQRCode {
     video,
     status = null,
     container = null,
-    timeoutCamera = 10000
+    timeoutCamera = 40000
   } = {}) {
-    // validação dos elementos obrigatórios
+    // parâmetros obrigatórios
     if (!video) throw new Error('video é obrigatório');
     if (!botaoIniciar) throw new Error('O botão iniciar é obrigatório');
     if (!botaoResetar) throw new Error('O botão resetar é obrigatório');
 
-    // guarda referências de UI
+    // elementos da UI
     this.botaoIniciar = botaoIniciar;
     this.botaoResetar = botaoResetar;
     this.video = video;
     this.status = status;
     this.container = container || document;
+
+    // timeout padrão de 10s para abrir câmera
     this.timeoutCamera = timeoutCamera;
 
-    // instancia leitor ZXing
+    // leitor do ZXing
     this.leitorCodigo = new ZXing.BrowserMultiFormatReader();
 
     // flags de controle
@@ -35,12 +45,13 @@ export class LeitorQRCode {
     this._eventListeners = {};
   }
 
-  // sistema de eventos customizados (status, error, processado etc.)
+  /** Registra eventos customizados (status, error, reset, errorLeitura) */
   on(eventName, callback) {
     if (!this._eventListeners[eventName]) this._eventListeners[eventName] = [];
     this._eventListeners[eventName].push(callback);
   }
 
+  /** Dispara eventos internos */
   _emit(eventName, data) {
     if (!this._eventListeners[eventName]) return;
     for (const cb of this._eventListeners[eventName]) {
@@ -48,16 +59,16 @@ export class LeitorQRCode {
     }
   }
 
-  // exibe status no HTML + emite evento
+  /** Atualiza status visual e emite evento */
   atualizarStatus(mensagem) {
     if (this.status) this.status.textContent = mensagem;
     this._emit('status', mensagem);
   }
 
-  // inicializa WASM + configura botões
+  /** Inicializa WASM e configura botões */
   async inicializar() {
     try {
-      await initWasm(); // carrega módulo WASM (xdados)
+      await initWasm();
       this._iniciado = true;
     } catch (erro) {
       this.atualizarStatus('Erro ao inicializar WASM: ' + erro);
@@ -65,20 +76,20 @@ export class LeitorQRCode {
       throw erro;
     }
 
-    // compatibilidade iOS (playsinline evita fullscreen automático)
+    // garante compatibilidade iOS (sem fullscreen forçado)
     this.video.setAttribute("playsinline", true);
     this.video.setAttribute("autoplay", true);
     this.video.setAttribute("muted", true);
 
-    // liga eventos de clique
+    // liga botões de controle
     this.botaoIniciar.addEventListener('click', () => this.iniciarLeitura());
     this.botaoResetar.addEventListener('click', () => this.resetarLeitura());
   }
 
-  // tenta abrir câmera com constraints (facingMode: environment etc.)
+  /** Tenta abrir câmera com constraints passados (environment etc.) */
   async tentarIniciarComModoCamera(constraints) {
     return this.leitorCodigo.decodeFromConstraints(
-      { video: { ...constraints }, audio: false },
+      { video: { ...constraints }, audio: false }, // FIX: constraints corretos
       this.video,
       async (resultado, erro) => {
         if (resultado) {
@@ -93,13 +104,13 @@ export class LeitorQRCode {
             this.liberarCamera();
           }
         }
-        // erro de leitura normal não derruba (NotFoundException é esperado)
+        // erro de leitura (não achou QR não conta como erro fatal)
         if (erro && !(erro instanceof ZXing.NotFoundException)) {
           this._emit('errorLeitura', erro);
         }
       }
     ).then(async () => {
-      // força autoplay do vídeo
+      // forçar autoplay do vídeo após obter stream
       if (this.video.srcObject) {
         try { await this.video.play(); } catch (e) {
           console.warn("Falha ao dar play no vídeo", e);
@@ -108,7 +119,7 @@ export class LeitorQRCode {
     });
   }
 
-  // rotina principal de leitura de QR via câmera
+  /** Rotina principal de leitura do QR via câmera */
   async iniciarLeitura() {
     if (!this._iniciado) throw new Error('Lib não inicializada. Chame inicializar() primeiro.');
     if (this._cameraAtiva) return;
@@ -126,22 +137,22 @@ export class LeitorQRCode {
     }, this.timeoutCamera);
 
     try {
-      // tenta abrir com facingMode padrão
+      // 1ª tentativa: câmera traseira padrão
       await this.tentarIniciarComModoCamera({ facingMode: 'environment' });
     } catch {
       try {
-        // tenta modo mais estrito
+        // 2ª tentativa: com exact
         await this.tentarIniciarComModoCamera({ facingMode: { exact: 'environment' } });
       } catch {
         try {
-          // fallback: lista dispositivos
+          // 3ª tentativa: escolhe manualmente dentre dispositivos
           const dispositivos = await this.leitorCodigo.listVideoInputDevices();
           if (dispositivos.length === 0) throw new Error('Nenhuma câmera disponível');
 
-          // tenta escolher traseira
+          // tenta achar a traseira pelo nome ou facingMode
           let cameraTraseira = dispositivos.find(d => /back|rear|traseira/i.test(d.label));
           if (!cameraTraseira) cameraTraseira = dispositivos.find(d => d.facingMode === 'environment');
-          if (!cameraTraseira) cameraTraseira = dispositivos[0];
+          if (!cameraTraseira) cameraTraseira = dispositivos[0]; // fallback
 
           await this.leitorCodigo.decodeFromVideoDevice(
             cameraTraseira.deviceId,
@@ -162,6 +173,7 @@ export class LeitorQRCode {
           if (this.video.srcObject) {
             try { await this.video.play(); } catch (e) { console.warn("play falhou", e); }
           }
+
         } catch (erro) {
           // falhou todas tentativas
           clearTimeout(this._timeoutId);
@@ -174,7 +186,7 @@ export class LeitorQRCode {
     }
   }
 
-  // reseta leitura e recursos
+  /** Reseta leitura e libera recursos */
   resetarLeitura() {
     this.atualizarStatus('Resetando leitura...');
     try { this.leitorCodigo.reset(); } catch {}
@@ -182,7 +194,7 @@ export class LeitorQRCode {
     this._emit('reset');
   }
 
-  // libera câmera e tracks
+  /** Libera câmera e stream de vídeo */
   liberarCamera() {
     try { this.leitorCodigo.reset(); } catch (e) { this.atualizarStatus('Erro ao resetar leitor: ' + e); }
 
@@ -202,13 +214,12 @@ export class LeitorQRCode {
     }
   }
 
-  // decodifica QR a partir de imagem (upload ou <img>)
+  /** Decodifica QR a partir de uma imagem (File ou <img>) */
   async decodificarImagem(imagem) {
     this.atualizarStatus('Decodificando QR Code da imagem...');
     try {
       let imgElem;
       if (imagem instanceof File) {
-        // converte File -> objeto URL -> <img>
         const url = URL.createObjectURL(imagem);
         imgElem = new Image();
         await new Promise((res, rej) => {
@@ -229,36 +240,33 @@ export class LeitorQRCode {
     }
   }
 
-  // valida string antes de mandar para o WASM
+  /** Valida string do QRCode (UTF-8, tamanho, caracteres permitidos) */
   validarEntrada(texto, maxLength = 2048) {
     if (typeof texto !== 'string') throw new Error('Entrada não é uma string.');
     if (texto.length > maxLength) throw new Error(`Entrada muito longa. Máximo permitido: ${maxLength} caracteres.`);
 
-    // valida UTF-8
     try {
       const encoder = new TextEncoder();
       const decoder = new TextDecoder('utf-8', { fatal: true });
       decoder.decode(encoder.encode(texto));
     } catch { throw new Error('Texto contém bytes inválidos UTF-8.'); }
 
-    // valida caracteres de controle
     if (/[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(texto)) throw new Error('Entrada contém caracteres de controle inválidos.');
 
-    // regex de whitelist
     const whitelistRegex = /^[\w\sÀ-ÖØ-öø-ÿ.,;:?!@#%&*()\-_=+\[\]{}|\\/<> "'´`^~ªº§¼½¾€$£¥€¢µ¿¡§]+$/u;
     if (!whitelistRegex.test(texto)) throw new Error('Entrada contém caracteres inválidos.');
 
     return this.sanitizeTexto(texto);
   }
 
-  // sanitize contra XSS
+  /** Sanitiza texto contra XSS */
   sanitizeTexto(t) {
     return t.replace(/&/g, '&amp;').replace(/</g, '&lt;')
             .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;').replace(/\//g, '&#x2F;');
   }
 
-  // processa QR com parser do WASM
+  /** Processa texto bruto do QR chamando o parser em WASM */
   async processar(texto) {
     try {
       this.validarEntrada(texto);
@@ -269,44 +277,36 @@ export class LeitorQRCode {
 
     this.atualizarStatus('Processando com WebAssembly...');
     try {
+      // chama função exposta pelo módulo WASM
       const dadosExtraidos = wasm.extrair_dados_documento(texto);
       const json = Object.fromEntries(dadosExtraidos.entries());
-
-      // FIX: Safari/Chrome mobile requer async repaint
-      setTimeout(() => {
-        this.preencherCampos(json);
-        this._emit('processado', json);
-        this.atualizarStatus('Dados processados localmente.');
-      }, 0);
-
+      this.preencherCampos(json);
+      this.atualizarStatus('Dados processados localmente.');
     } catch (erro) {
       this.atualizarStatus('Erro ao processar QR Code: ' + erro.message);
       throw erro;
     }
   }
 
-  // preenche automaticamente os campos (data-json)
+  /** Preenche campos de formulário com atributo data-json */
   preencherCampos(dados) {
     if (!dados) return;
     this.container.querySelectorAll('input[data-json], select[data-json], textarea[data-json]').forEach(el => {
       const chave = el.dataset.json;
       if (chave in dados) {
-        if ('value' in el) {
-          el.value = dados[chave]?.toString().trim() || '';
-          // FIX: garante atualização em mobile (Safari/Chrome)
-          el.dispatchEvent(new Event('input', { bubbles: true }));
-          el.dispatchEvent(new Event('change', { bubbles: true }));
-        } else {
-          el.textContent = dados[chave]?.toString().trim() || '';
-        }
+        if ('value' in el) el.value = dados[chave]?.toString().trim() || '';
+        else el.textContent = dados[chave]?.toString().trim() || '';
       }
     });
   }
 
-  // helpers de UI
+  /** Utilitário: mostra/esconde vídeo */
   _showVideo(mostrar) { this.video.style.display = mostrar ? 'block' : 'none'; }
+
+  /** Utilitário: troca visibilidade dos botões */
   _toggleBotoes({ iniciar, resetar }) {
     if (this.botaoIniciar) this.botaoIniciar.style.display = iniciar ? 'inline-block' : 'none';
     if (this.botaoResetar) this.botaoResetar.style.display = resetar ? 'inline-block' : 'none';
   }
 }
+
